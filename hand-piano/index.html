@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hand gesture piano</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #0a0a10;
+      color: #eee;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+    #status {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #fbbf77;
+    }
+    #diag {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    .main-row {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px;
+      align-items: flex-start;
+    }
+    #video-layer {
+      position: relative;
+      width: min(360px, 100%);
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 8px 28px rgba(0,0,0,.4);
+      resize: horizontal;
+      min-width: 200px;
+      max-width: 100%;
+    }
+    #input-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      z-index: 0;
+    }
+    #debug-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .help {
+      flex: 1;
+      min-width: 220px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: rgba(255,255,255,.78);
+    }
+    .help strong { color: #a8e6ff; }
+    #piano-wrap {
+      padding: 0 12px 12px;
+    }
+    #piano {
+      display: flex;
+      position: relative;
+      height: 140px;
+      border-radius: 8px 8px 4px 4px;
+      overflow: visible;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+      user-select: none;
+    }
+    .key {
+      flex: 1;
+      position: relative;
+      background: linear-gradient(180deg, #fafafa 0%, #d4d4d8 55%, #b8b8c0 100%);
+      border: 1px solid #555;
+      border-right-width: 1px;
+      border-radius: 0 0 4px 4px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      transition: background .04s, box-shadow .04s;
+    }
+    .key:last-child { border-right-width: 1px; }
+    .key.active {
+      background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 50%, #0ea5e9 100%);
+      color: #0c4a6e;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.15);
+    }
+    .key .note { opacity: 0.65; font-size: 10px; }
+    #error {
+      display: none;
+      position: fixed;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(10,10,16,.94);
+      color: #f99;
+      text-align: center;
+      z-index: 100;
+    }
+    #error.show { display: flex; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Gesture piano</h1>
+      <div id="diag"></div>
+      <div id="status">Starting…</div>
+    </header>
+    <div class="main-row">
+      <div id="video-layer" title="Camera preview (mirrored)">
+        <video id="input-video" playsinline muted autoplay></video>
+        <canvas id="debug-canvas" aria-hidden="true"></canvas>
+      </div>
+      <div class="help">
+        <div><strong>How to play</strong></div>
+        <div>Click anywhere once if sound does not start (browser audio policy).</div>
+        <div>Show your hand to the camera. Move <strong>left ↔ right</strong> to change notes (index fingertip).</div>
+        <div>Keep your fingertip in the middle band of the frame vertically. <strong>D</strong> toggles skeleton overlay.</div>
+      </div>
+    </div>
+    <div id="piano-wrap">
+      <div id="piano" aria-label="One octave piano keys"></div>
+    </div>
+  </div>
+  <div id="error"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>
