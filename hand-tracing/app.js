@@ -34,12 +34,6 @@
   var mctx = miniCanvas.getContext('2d');
 
   var curriculum = null;
-  var hitMaskCanvas = document.createElement('canvas');
-  var strictMaskCanvas = document.createElement('canvas');
-  var hitMaskCtx = hitMaskCanvas.getContext('2d');
-  var strictMaskCtx = strictMaskCanvas.getContext('2d');
-  var hitMaskData = null;
-  var strictMaskData = null;
 
   var state = {
     letterIndex: 0,
@@ -51,7 +45,9 @@
     sy: -1,
     lastValidFx: null,
     lastValidFy: null,
-    letterComplete: false
+    letterComplete: false,
+    fingerPreview: null,
+    lastNearStroke: false
   };
 
   var progress = loadProgress();
@@ -227,62 +223,8 @@
     if (traceCanvas.width !== w || traceCanvas.height !== h) {
       traceCanvas.width = w;
       traceCanvas.height = h;
-      hitMaskCanvas.width = w;
-      hitMaskCanvas.height = h;
-      strictMaskCanvas.width = w;
-      strictMaskCanvas.height = h;
-      rebuildMasks();
       redrawAll();
     }
-  }
-
-  function rebuildMasks() {
-    var letter = curriculum.letters[state.letterIndex];
-    if (!letter) return;
-    var w = traceCanvas.width;
-    var h = traceCanvas.height;
-    if (w < 32 || h < 32) return;
-    var minDim = Math.min(w, h);
-    var lwHit = Math.max(16, minDim * 0.125);
-    var lwStrict = Math.max(12, minDim * 0.095);
-
-    function drawMask(ctx, lineW) {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#fff';
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = lineW;
-      for (var s = 0; s < letter.strokes.length; s++) {
-        var pts = letter.strokes[s].points;
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0] * w, pts[0][1] * h);
-        for (var i = 1; i < pts.length; i++) {
-          ctx.lineTo(pts[i][0] * w, pts[i][1] * h);
-        }
-        ctx.stroke();
-      }
-    }
-
-    drawMask(hitMaskCtx, lwHit);
-    drawMask(strictMaskCtx, lwStrict);
-    hitMaskData = hitMaskCtx.getImageData(0, 0, w, h).data;
-    strictMaskData = strictMaskCtx.getImageData(0, 0, w, h).data;
-  }
-
-  function sampleMask(data, x, y, w, h) {
-    var xi = Math.floor(x);
-    var yi = Math.floor(y);
-    if (xi < 0 || yi < 0 || xi >= w || yi >= h) return 0;
-    return data[(yi * w + xi) * 4];
-  }
-
-  function maskHit(fx, fy, strict) {
-    var w = traceCanvas.width;
-    var h = traceCanvas.height;
-    var data = strict ? strictMaskData : hitMaskData;
-    if (!data) return false;
-    return sampleMask(data, fx, fy, w, h) > 90;
   }
 
   function currentLetter() {
@@ -295,11 +237,11 @@
   }
 
   function corridorPx() {
-    return Math.max(14, Math.min(traceCanvas.width, traceCanvas.height) * 0.085);
+    return Math.max(24, Math.min(traceCanvas.width, traceCanvas.height) * 0.14);
   }
 
   function cpTolPx() {
-    return Math.max(18, Math.min(traceCanvas.width, traceCanvas.height) * 0.095);
+    return Math.max(26, Math.min(traceCanvas.width, traceCanvas.height) * 0.11);
   }
 
   function nearActiveStroke(fx, fy) {
@@ -334,7 +276,6 @@
     state.ink = [];
     for (var i = 0; i < currentLetter().strokes.length; i++) state.ink.push([]);
     btnNext.disabled = true;
-    rebuildMasks();
     beginStroke();
     updateStarsDisplay();
     redrawAll();
@@ -354,7 +295,7 @@
     statusEl.textContent =
       'Frames: ' +
       MP_FRAMES +
-      ' · Point index finger to trace. D = skeleton. Click for sound.';
+      ' · Pink/teal dot = your finger on the letter. Teal = on the stroke (ink draws). D = skeleton.';
   }
 
   function updateStarsDisplay() {
@@ -425,13 +366,21 @@
 
   function drawInk(ctx, w, h) {
     ctx.save();
+    var lw = Math.max(6, Math.min(w, h) * 0.028);
     ctx.strokeStyle = '#e53e3e';
-    ctx.lineWidth = Math.max(6, Math.min(w, h) * 0.028);
+    ctx.fillStyle = '#e53e3e';
+    ctx.lineWidth = lw;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (var s = 0; s < state.ink.length; s++) {
       var seg = state.ink[s];
-      if (!seg || seg.length < 2) continue;
+      if (!seg || !seg.length) continue;
+      if (seg.length === 1) {
+        ctx.beginPath();
+        ctx.arc(seg[0].x, seg[0].y, lw * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
       ctx.beginPath();
       ctx.moveTo(seg[0].x, seg[0].y);
       for (var i = 1; i < seg.length; i++) {
@@ -442,6 +391,23 @@
     ctx.restore();
   }
 
+  function drawFingerHint(ctx) {
+    if (!state.fingerPreview) return;
+    var x = state.fingerPreview.x;
+    var y = state.fingerPreview.y;
+    ctx.save();
+    ctx.fillStyle = state.lastNearStroke
+      ? 'rgba(56, 178, 172, 0.55)'
+      : 'rgba(237, 100, 166, 0.45)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function redrawAll() {
     var w = traceCanvas.width;
     var h = traceCanvas.height;
@@ -449,6 +415,7 @@
     tctx.fillStyle = '#fffef9';
     tctx.fillRect(0, 0, w, h);
     drawGhost(tctx, w, h, 1, state.strokeIndex);
+    drawFingerHint(tctx);
     drawInk(tctx, w, h);
     drawArrows(tctx, w, h);
   }
@@ -473,7 +440,6 @@
     var cx = state.checkpoints[k][0] * w;
     var cy = state.checkpoints[k][1] * h;
     if (Math.hypot(fx - cx, fy - cy) >= tol) return;
-    if (!looseMaskHit(fx, fy)) return;
     if (!nearActiveStroke(fx, fy)) return;
     state.cpHit[k] = true;
     if (k === state.checkpoints.length - 1) {
@@ -487,10 +453,6 @@
         beginStroke();
       }
     }
-  }
-
-  function looseMaskHit(fx, fy) {
-    return maskHit(fx, fy, false);
   }
 
   function completeLetter() {
@@ -522,6 +484,8 @@
       state.sx = -1;
       state.sy = -1;
       state.lastValidFx = null;
+      state.fingerPreview = null;
+      state.lastNearStroke = false;
       redrawAll();
       updateUI();
       return;
@@ -543,12 +507,19 @@
     fx = state.sx;
     fy = state.sy;
 
-    var insideLetter = looseMaskHit(fx, fy);
-    var near = nearActiveStroke(fx, fy);
+    state.fingerPreview = { x: fx, y: fy };
 
-    if (insideLetter && near) {
+    var near = nearActiveStroke(fx, fy);
+    state.lastNearStroke = near;
+
+    if (near) {
       var arr = state.ink[state.strokeIndex];
-      if (state.lastValidFx != null) {
+      var minStep = Math.max(2, Math.min(w, h) * 0.008);
+      var doPush =
+        arr.length === 0 ||
+        Math.hypot(fx - arr[arr.length - 1].x, fy - arr[arr.length - 1].y) >
+          minStep;
+      if (doPush) {
         arr.push({ x: fx, y: fy });
       }
       state.lastValidFx = fx;
@@ -640,7 +611,6 @@
       requestAnimationFrame(function () {
         resizeTrace();
         if (curriculum) {
-          rebuildMasks();
           redrawAll();
           drawMini();
         }
