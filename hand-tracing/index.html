@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trace letters — hand tracing</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f5f0e6;
+      color: #2d2a32;
+      font-family: "Segoe UI", "Comic Sans MS", system-ui, sans-serif;
+    }
+    .app {
+      display: flex;
+      flex-wrap: wrap;
+      min-height: 100vh;
+    }
+    .left {
+      flex: 1 1 55%;
+      min-width: 280px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #e8f4fc 0%, #dceef8 100%);
+      border-right: 3px solid #b8d4e8;
+    }
+    .trace-wrap {
+      position: relative;
+      width: min(92vw, 520px);
+      aspect-ratio: 1;
+      max-height: min(92vw, 520px);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+      border: 4px solid #7c9cbf;
+    }
+    #trace-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      touch-action: none;
+    }
+    .pip {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 28%;
+      aspect-ratio: 4/3;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.9);
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      z-index: 2;
+    }
+    #input-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    #debug-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .right {
+      flex: 1 1 320px;
+      max-width: 100%;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #big-letter {
+      font-size: clamp(4rem, 15vw, 7rem);
+      font-weight: 800;
+      color: #3d6ea8;
+      line-height: 1;
+      margin: 8px 0 4px;
+      text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(61,110,168,.2);
+    }
+    #hint {
+      font-size: 1.05rem;
+      color: #4a5568;
+      max-width: 320px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+    #step-label {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      margin-bottom: 8px;
+    }
+    #mini-wrap {
+      width: 120px;
+      height: 120px;
+      margin: 8px 0 16px;
+      border-radius: 12px;
+      background: #fff;
+      border: 3px dashed #cbd5e0;
+      overflow: hidden;
+    }
+    #mini-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .stars-row {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+      font-size: 2rem;
+    }
+    .star {
+      opacity: 0.25;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .star.on {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    button {
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #48bb78;
+      color: #fff;
+      box-shadow: 0 4px 0 #2f855a;
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2f855a;
+    }
+    button.secondary {
+      background: #ed8936;
+      box-shadow: 0 4px 0 #c05621;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 4px 0 #2f855a;
+    }
+    #status {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-top: 12px;
+      max-width: 280px;
+    }
+    #diag {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-top: 6px;
+    }
+    #particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .right-inner {
+      position: relative;
+      z-index: 1;
+    }
+    #error {
+      display: none;
+      position: fixed;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(45,42,50,.94);
+      color: #feb2b2;
+      text-align: center;
+      z-index: 200;
+    }
+    #error.show { display: flex; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="left">
+      <div class="trace-wrap">
+        <canvas id="trace-canvas" width="512" height="512" aria-label="Tracing area"></canvas>
+        <div class="pip" title="Your hand">
+          <video id="input-video" playsinline muted autoplay></video>
+          <canvas id="debug-canvas" aria-hidden="true"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="right">
+      <div id="particles"></div>
+      <div class="right-inner">
+        <div id="big-letter">—</div>
+        <p id="hint"></p>
+        <div id="step-label"></div>
+        <div id="mini-wrap">
+          <canvas id="mini-canvas" width="120" height="120"></canvas>
+        </div>
+        <div class="stars-row" aria-label="Stars earned">
+          <span class="star" id="star-0">★</span>
+          <span class="star" id="star-1">★</span>
+          <span class="star" id="star-2">★</span>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="btn-next" disabled>Next letter</button>
+          <button type="button" class="secondary" id="btn-redo">Redo stroke</button>
+        </div>
+        <div id="status">Loading…</div>
+        <div id="diag"></div>
+      </div>
+    </div>
+  </div>
+  <div id="error"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>

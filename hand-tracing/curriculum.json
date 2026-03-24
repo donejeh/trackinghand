@@ -1,0 +1,48 @@
+{
+  "letters": [
+    {
+      "char": "L",
+      "hint": "Start at the top. Draw one line down, then a line across the bottom!",
+      "strokes": [
+        { "points": [[0.22, 0.18], [0.22, 0.82]] },
+        { "points": [[0.22, 0.82], [0.82, 0.82]] }
+      ]
+    },
+    {
+      "char": "T",
+      "hint": "Top line first, then draw down the middle like a tree trunk!",
+      "strokes": [
+        { "points": [[0.18, 0.2], [0.82, 0.2]] },
+        { "points": [[0.5, 0.2], [0.5, 0.85]] }
+      ]
+    },
+    {
+      "char": "F",
+      "hint": "A tall line on the left, then two smaller lines on the right at top and middle.",
+      "strokes": [
+        { "points": [[0.22, 0.12], [0.22, 0.88]] },
+        { "points": [[0.22, 0.12], [0.78, 0.12]] },
+        { "points": [[0.22, 0.48], [0.68, 0.48]] }
+      ]
+    },
+    {
+      "char": "E",
+      "hint": "One long line on the left, then three lines sticking out on the right.",
+      "strokes": [
+        { "points": [[0.2, 0.12], [0.2, 0.88]] },
+        { "points": [[0.2, 0.12], [0.74, 0.12]] },
+        { "points": [[0.2, 0.48], [0.64, 0.48]] },
+        { "points": [[0.2, 0.88], [0.74, 0.88]] }
+      ]
+    },
+    {
+      "char": "A",
+      "hint": "Left slant up, then right slant down, then a little bridge across the middle.",
+      "strokes": [
+        { "points": [[0.28, 0.85], [0.5, 0.15]] },
+        { "points": [[0.5, 0.15], [0.72, 0.85]] },
+        { "points": [[0.36, 0.52], [0.64, 0.52]] }
+      ]
+    }
+  ]
+}

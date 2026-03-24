@@ -1,0 +1,30 @@
+# ——— OS noise ———
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ——— Editor / IDE (uncomment what you use) ———
+.idea/
+*.swp
+*.swo
+*~
+
+# ——— Logs & local env (if you add PHP/backend later) ———
+*.log
+.env
+.env.local
+.env.*.local
+
+# ——— Dependencies (if you add build tools later) ———
+node_modules/
+vendor/
+
+# ——— Build / cache outputs ———
+dist/
+.cache/
+*.tmp
+
+# ——— Optional: uncomment to ignore local editor config ———
+# .vscode/
+# .cursor/
